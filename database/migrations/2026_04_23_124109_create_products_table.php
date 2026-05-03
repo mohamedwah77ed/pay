@@ -12,16 +12,27 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
-        $table->id();
-        $table->string('name');
-        $table->decimal('price', 8, 2);
-        $table->text('description')->nullable();
-        $table->string('image')->nullable();
-        $table->unsignedBigInteger('category_id');
-        $table->timestamps();
-
-        $table->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
-    });
+            $table->id();
+            $table->string('title');
+            $table->string('slug')->unique();
+            $table->text('summary');
+            $table->longText('description')->nullable();
+            $table->text('image')->nullable();
+            $table->integer('stock')->default(1);
+            $table->string('size')->default('M')->nullable();
+            $table->enum('condition',['default','new','hot'])->default('default');
+            $table->enum('status',['active','inactive'])->default('inactive');
+            $table->float('price');
+            $table->float('discount')->nullable();
+            $table->boolean('is_featured')->default(false);
+            $table->unsignedBigInteger('cat_id')->nullable();
+            $table->unsignedBigInteger('child_cat_id')->nullable();
+            //$table->unsignedBigInteger('brand_id')->nullable();
+            //$table->foreign('brand_id')->references('id')->on('brands')->onDelete('SET NULL');
+            $table->foreign('cat_id')->references('id')->on('categories')->onDelete('SET NULL');
+            $table->foreign('child_cat_id')->references('id')->on('categories')->onDelete('SET NULL');
+            $table->timestamps();
+        });
     }
 
     /**

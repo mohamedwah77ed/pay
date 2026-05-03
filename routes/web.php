@@ -30,7 +30,7 @@ Route::get('/cart/decrease/{id}', [CartController::class, 'decrease'])->name('ca
 
 
 Route::resource('products', ProductController::class);
-Route::resource('categories', CategoryController::class);
+Route::resource('categories', CategoryController::class) ;
 
 
 

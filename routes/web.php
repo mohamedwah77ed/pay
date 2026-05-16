@@ -4,7 +4,10 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\orderController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -17,22 +20,34 @@ use App\Http\Controllers\CartController;
 |
 */
 
+/*
+Route::get($uri, $callback);
+Route::post($uri, $callback);
+Route::put($uri, $callback);
+Route::patch($uri, $callback);
+Route::delete($uri, $callback);
+Route::options($uri, $callback);
+*/
+
+
 Route::get('/', function () {
     return view('welcome');
 });
-Route::get('/cart', [CartController::class, 'cart'])->name('cart.index');
-Route::get('/add-to-cart/{id}', [CartController::class, 'addToCart'])->name('cart.add');
-Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
-
-Route::get('/cart/increase/{id}', [CartController::class, 'increase'])->name('cart.increase');
-Route::get('/cart/decrease/{id}', [CartController::class, 'decrease'])->name('cart.decrease');
-
 
 
 Route::resource('products', ProductController::class);
 Route::resource('categories', CategoryController::class) ;
+Route::resource('brand', BrandController::class);
 
+Route::get('cart', [CartController::class, 'index'])->name('cart.index');
 
+Route::post('/add-to-cart', [CartController::class, 'addToCart'])->name('add-to-cart');
+Route::post('/cart/increase', [CartController::class, 'increaseCart'])->name('cart.increase');
+Route::post('/cart/decrease', [CartController::class, 'decreaseCart'])->name('cart.decrease');
+Route::delete('/cart-delete', [CartController::class,'cartDelete'])->name('cart-delete');
+
+Route::get('/checkout', [OrderController::class, 'create'])->name('checkout')->middleware('auth');
+Route::post('/checkout', [OrderController::class, 'store'])->name('order.store')->middleware('auth');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -43,5 +58,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
 
 require __DIR__.'/auth.php';

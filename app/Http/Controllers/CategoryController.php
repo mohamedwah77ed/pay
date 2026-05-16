@@ -43,12 +43,16 @@ public function store(Request $request)
 
    
     $slug = Str::slug($request->title);
-    $original = $slug;
-    $count = 1;
-    while (Category::where('slug', $slug)->exists()) {
-        $slug = $original . '-' . $count;
-        $count++;
-    }
+
+$latestSlug = Category::where('slug', 'like', $slug . '%')
+    ->latest('id')
+    ->value('slug');
+
+if ($latestSlug) {
+    preg_match('/-(\d+)$/', $latestSlug, $matches);
+    $count = isset($matches[1]) ? (int)$matches[1] + 1 : 1;
+    $slug = $slug . '-' . $count;
+}
 
     $validatedData['slug'] = $slug;
     $validatedData['is_parent'] = $request->input('is_parent', 0);

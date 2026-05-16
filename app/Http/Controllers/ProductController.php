@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Product;
+use App\Models\Products;
 use App\Models\Category;
 use Illuminate\Support\Str;
 
@@ -14,7 +14,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::with(['cat_info', 'sub_cat_info'])->get();
+         $products = Products::getAllProduct();
        return view('products.index', compact('products'));
     }
 
@@ -52,13 +52,13 @@ class ProductController extends Controller
     $slug = Str::slug($request->title);
     $original = $slug;
     $count = 1;
-    while (Product::where('slug', $slug)->exists()) {
+    while (Products::where('slug', $slug)->exists()) {
         $slug = $original . '-' . $count;
         $count++;
     }
     $validatedData['slug'] = $slug;
 
-    $product = Product::create($validatedData);
+    $product = Products::create($validatedData);
 
     if ($product) {
         session()->flash('success', 'Product added successfully');
@@ -98,6 +98,17 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $product = Products::findOrFail($id);
+        $status = $product->delete();
+
+        $message = $status
+            ? 'Product successfully deleted'
+            : 'Error while deleting product';
+
+        return redirect()->route('products.index')->with(
+            $status ? 'success' : 'error',
+            $message
+        );
+    
     }
 }

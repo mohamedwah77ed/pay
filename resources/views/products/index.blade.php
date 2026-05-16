@@ -44,7 +44,12 @@
                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                     </form>
 
-                    <a href="{{ route('cart.add', $product->id) }}" class="btn btn-success btn-sm ms-1">Add to Cart</a>
+                    <form action="{{ route('add-to-cart') }}" method="POST" class="d-inline">
+                        @csrf
+                        
+                        <input type="hidden" name="slug" value="{{ $product->slug }}">                
+                        <button type="submit" class="btn btn-success btn-sm ms-1">Add to Cart</button>
+                    </form>
                 </td>
             </tr>
             @empty

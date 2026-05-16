@@ -1,151 +1,106 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\CartItem;
-use App\Models\Product;
+
+use App\Models\Cart;
+use App\Models\Products;
 use Illuminate\Http\Request;
+
 
 class CartController extends Controller
 {
+    public function index()
+    {
+        $products = Cart::getAllProductFromCart();
+        return view('cart.index', compact('products'));
+    }
 
-public function addToCart($product_id)
-{
-    $product = Product::findOrFail($product_id);
-
-    // لو المستخدم مش مسجل - Session
-    if (!auth()->check()) {
-        $cart = session()->get('cart', []);
-
-        if (isset($cart[$product_id])) {
-            $cart[$product_id]['quantity']++;
-        } else {
-            $cart[$product_id] = [
-                'name' => $product->name,
-                'price' => $product->price,
-                'quantity' => 1
-            ];
+    public function addToCart(Request $request)
+    {
+        
+        if (empty($request->slug)) {
+            return back()->with('error', 'Invalid Products');
         }
 
-        session()->put('cart', $cart);
-        return back()->with('success', 'تم إضافة المنتج للسلة');
-    }
+        $product = Products::where('slug', $request->slug)->first();
 
-    // لو مسجل دخول - Database
-    $user = auth()->user();
-
-    $item = CartItem::where('user_id', $user->id)
-        ->where('product_id', $product_id)
-        ->first();
-
-    if ($item) {
-        $item->quantity++;
-        $item->save();
-    } else {
-        CartItem::create([
-            'user_id' => $user->id,
-            'product_id' => $product_id,
-            'quantity' => 1,
-        ]);
-    }
-
-    return back()->with('success', 'تم إضافة المنتج للسلة');
-}
-
-
- public function cart()
-{
-    if (!auth()->check()) {
-        // ضيف
-        $cart = session()->get('cart', []);
-        return view('cart.index', ['sessionCart' => $cart]);
-    }
-
-    // مستخدم مسجّل
-    $items = CartItem::with('product')
-        ->where('user_id', auth()->id())
-        ->get();
-
-    return view('cart.index', ['dbCart' => $items]);
-}
-public function remove($product_id)
-{
-    // ضيف
-    if (!auth()->check()) {
-        $cart = session()->get('cart', []);
-        unset($cart[$product_id]);
-        session()->put('cart', $cart);
-        return back();
-    }
-
-    // مسجل
-    CartItem::where('user_id', auth()->id())
-        ->where('product_id', $product_id)
-        ->delete();
-
-    return back();
-}
-public function increase($product_id)
-{
-    // ضيف
-    if (!auth()->check()) {
-        $cart = session()->get('cart', []);
-
-        if (isset($cart[$product_id])) {
-            $cart[$product_id]['quantity']++;
-            session()->put('cart', $cart);
+        if (empty($product)) {
+            return back()->with('error', 'Invalid Products');
         }
 
-        return back();
-    }
+        $already_cart = Cart::getUserCart($product->id);
 
-    // مستخدم
-    $item = CartItem::where('user_id', auth()->id())
-        ->where('product_id', $product_id)
-        ->first();
-
-    if ($item) {
-        $item->quantity++;
-        $item->save();
-    }
-
-    return back();
-}
-
-public function decrease($product_id)
-{
-    // ضيف
-    if (!auth()->check()) {
-        $cart = session()->get('cart', []);
-
-        if (isset($cart[$product_id])) {
-
-            // لو الكمية 1 → نحذف المنتج
-            if ($cart[$product_id]['quantity'] <= 1) {
-                unset($cart[$product_id]);
-            } else {
-                $cart[$product_id]['quantity']--;
+        if ($already_cart) {
+            if ($already_cart->product->stock <= $already_cart->quantity) {
+                return back()->with('error', 'Stock not sufficient!');
             }
-
-            session()->put('cart', $cart);
-        }
-
-        return back();
-    }
-
-    // مستخدم مسجل
-    $item = CartItem::where('user_id', auth()->id())
-        ->where('product_id', $product_id)
-        ->first();
-
-    if ($item) {
-        if ($item->quantity <= 1) {
-            $item->delete();
+            $already_cart->quantity = $already_cart->quantity + 1;
+            $already_cart->amount   = $already_cart->price * $already_cart->quantity;
+            $already_cart->save();
         } else {
-            $item->quantity--;
-            $item->save();
+            if ($product->stock <= 0) {
+                return back()->with('error', 'Stock not sufficient!');
+            }
+            $cart             = new Cart;
+            $cart->user_id    = auth()->user()->id;
+            $cart->product_id = $product->id;
+            $cart->price      = $product->price;
+            $cart->quantity   = 1;
+            $cart->amount     = $product->price;
+            $cart->save();
         }
+
+        return back()->with('success', 'Product successfully added to cart');
     }
 
-    return back();
-}
+    public function increaseCart(Request $request)
+    {
+        $cart = Cart::getUserCart($request->product_id);
+
+        if (!$cart) {
+            return back()->with('error', 'Product not found');
+        }
+
+        if ($cart->product->stock <= $cart->quantity) {
+            return back()->with('error', 'Stock not sufficient!');
+        }
+
+        $cart->quantity = $cart->quantity + 1;
+        $cart->amount   = $cart->price * $cart->quantity;
+        $cart->save();
+
+        return back()->with('success', 'Cart updated');
+    }
+
+    public function decreaseCart(Request $request)
+    {
+        $cart = Cart::getUserCart($request->product_id);
+
+        if (!$cart) {
+            return back()->with('error', 'Product not found');
+        }
+
+        if ($cart->quantity <= 1) {
+            $cart->delete();
+            return back()->with('success', 'Product removed');
+        }
+
+        $cart->quantity = $cart->quantity - 1;
+        $cart->amount   = $cart->price * $cart->quantity;
+        $cart->save();
+
+        return back()->with('success', 'Cart updated');
+    }
+
+    public function cartDelete(Request $request)
+    {
+        $cart = Cart::find($request->id);
+
+        if ($cart) {
+            $cart->delete();
+            return back()->with('success', 'Cart successfully removed');
+        }
+
+        return back()->with('error', 'Error please try again');
+    }
 }

@@ -46,8 +46,7 @@ public function create()
      */
    public function store(Request $request)
 {
-    dd($request->all());
-
+      //dd($request->all());
     $validated = $request->validate([
         'first_name' => 'required|string|max:255',
         'last_name'  => 'required|string|max:255',
@@ -61,7 +60,6 @@ public function create()
         'shipping'   => 'nullable|exists:shippings,id',
     ]);
 
-    // جيب الـ Cart Items
     $cartItems = Cart::where('user_id', auth()->user()->id)
                      ->where('order_id', null)
                      ->get();
@@ -72,7 +70,6 @@ public function create()
     }
 
     try {
-        // احسب الـ Shipping
         $shippingPrice = 0;
         $shipping      = null;
         if ($request->filled('shipping')) {
@@ -80,13 +77,9 @@ public function create()
             $shippingPrice = $shipping ? (float)$shipping->price : 0;
         }
 
-        // احسب الـ Coupon
         $couponDiscount = session('coupon') ? (float)session('coupon')['value'] : 0;
+        $subTotal       = $cartItems->sum('amount');
 
-        // احسب الـ SubTotal
-        $subTotal = $cartItems->sum('amount');
-
-        // عمل الـ Order
         $order               = new Order();
         $order->order_number = 'ORD-' . strtoupper(Str::random(10));
         $order->user_id      = auth()->user()->id;
@@ -106,21 +99,14 @@ public function create()
         $order->status       = 'new';
         $order->save();
 
-        // ربط الـ Cart بالـ Order
-        Cart::where('user_id', auth()->user()->id)
-            ->where('order_id', null)
-            ->update(['order_id' => $order->id]);
+        // ✅ وجه للـ Paymob مع الأوردر
+        return redirect()->route('paymob.pay', $order->id);
 
-        // امسح الـ Session
-        session()->forget(['cart', 'coupon']);
-
-        session()->flash('success', 'Order placed successfully');
-        return redirect()->route('cart.index');
-
-   } catch (\Exception $e) {
-    session()->flash('error', 'Something went wrong.');
-    return back()->withInput();
-}
+    } catch (\Exception $e) {
+         dd($e->getMessage());
+        session()->flash('error', 'Something went wrong.');
+        return back()->withInput();
+    }
 }
 
     /**

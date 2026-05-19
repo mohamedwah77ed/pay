@@ -24,6 +24,12 @@ return [
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
+    'paymob' => [
+    'api_key'        => env('PAYMOB_API_KEY'),
+    'base_url'       => env('PAYMOB_BASE_URL'),
+    'integration_id' => env('PAYMOB_INTEGRATION_ID'),
+    'iframe_id'      => env('PAYMOB_IFRAME_ID'),
+],
 
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),

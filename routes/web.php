@@ -7,6 +7,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\orderController;
+use App\Http\Controllers\PaymobController;
 
 
 /*
@@ -48,6 +49,14 @@ Route::delete('/cart-delete', [CartController::class,'cartDelete'])->name('cart-
 
 Route::get('/checkout', [OrderController::class, 'create'])->name('checkout')->middleware('auth');
 Route::post('/checkout', [OrderController::class, 'store'])->name('order.store')->middleware('auth');
+// GET عشان Paymob بيعمل Redirect مش POST
+Route::get('/paymob/callback', [PaymobController::class, 'callback'])
+     ->name('paymob.callback');
+
+Route::get('/pay/{order}', [PaymobController::class, 'pay'])
+     ->name('paymob.pay')
+     ->middleware('auth');
+
 
 Route::get('/dashboard', function () {
     return view('dashboard');
